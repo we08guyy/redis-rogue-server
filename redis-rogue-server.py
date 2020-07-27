@@ -21,9 +21,9 @@ def mk_cmd(raw_cmd):
 def din(sock, cnt, color='34'):
     msg = sock.recv(cnt)
     if len(msg) < 300:
-        print("\033[1;{};40m[->]\033[0m {}".format(color, msg))
+        print("\033[1;{}m[->]\033[0m {}".format(color, msg))
     else:
-        print("\033[1;{};40m[->]\033[0m {}......{}".format(color, msg[:80], msg[-80:]))
+        print("\033[1;{}m[->]\033[0m {}......{}".format(color, msg[:80], msg[-80:]))
     return msg.decode()
 
 def dout(sock, msg):
@@ -31,9 +31,9 @@ def dout(sock, msg):
         msg = msg.encode()
     sock.send(msg)
     if len(msg) < 300:
-        print("\033[1;32;40m[<-]\033[0m {}".format(msg))
+        print("\033[1;32m[<-]\033[0m {}".format(msg))
     else:
-        print("\033[1;32;40m[<-]\033[0m {}......".format(msg[:70]))
+        print("\033[1;32m[<-]\033[0m {}......".format(msg[:70]))
 
 def decode_shell_result(s):
     return "\n".join(s.split("\r\n")[1:-1])
@@ -104,13 +104,13 @@ def interact(remote):
     try:
         print('\033[36m[**] Change to interact mode...\033[0m')
         while True:
-            cmd = input("\033[1;36;40m[<<]\033[0m ").strip()
+            cmd = input("\033[1;36m[<<]\033[0m ").strip()
             if cmd == "exit":
                 return
             r = remote.shell_cmd(cmd)
             for l in decode_shell_result(r).split("\n"):
                 if l:
-                    print("\033[1;36;40m[>>]\033[0m " + l)
+                    print("\033[1;36m[>>]\033[0m " + l)
     except KeyboardInterrupt:
         return
 
